@@ -23,6 +23,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 // Mock data structures
 data class WatchItem(
@@ -33,15 +39,38 @@ data class WatchItem(
     val type: String // "Série" or "Film"
 )
 
-val mockInProgress = listOf(
-    WatchItem("1", "Dragon Ball Z", 120, 291, "Série"),
-    WatchItem("2", "Loki", 4, 6, "Série"),
-    WatchItem("3", "Daredevil", 2, 13, "Série")
-)
+class HomeViewModel : ViewModel() {
+    private val _inProgress = MutableStateFlow(
+        listOf(
+            WatchItem("1", "Dragon Ball Z", 120, 291, "Série"),
+            WatchItem("2", "Loki", 4, 6, "Série"),
+            WatchItem("3", "Daredevil", 2, 13, "Série")
+        )
+    )
+    val inProgress: StateFlow<List<WatchItem>> = _inProgress.asStateFlow()
+
+    fun incrementProgress(id: String) {
+        val currentList = _inProgress.value.toMutableList()
+        val index = currentList.indexOfFirst { it.id == id }
+        if (index != -1) {
+            val item = currentList[index]
+            if (item.currentProgress < item.totalProgress) {
+                currentList[index] = item.copy(currentProgress = item.currentProgress + 1)
+                _inProgress.value = currentList
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier, onSurpriseClick: () -> Unit = {}) {
+fun HomeScreen(
+    modifier: Modifier = Modifier, 
+    onSurpriseClick: () -> Unit = {},
+    viewModel: HomeViewModel = viewModel()
+) {
+    val inProgress = viewModel.inProgress.collectAsStateWithLifecycle().value
+
     val cosmicGradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF0F172A), Color(0xFF31103F), Color(0xFF000000))
     )
@@ -134,8 +163,8 @@ fun HomeScreen(modifier: Modifier = Modifier, onSurpriseClick: () -> Unit = {}) 
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(end = 16.dp)
             ) {
-                items(mockInProgress) { item ->
-                    WatchCard(item = item)
+                items(inProgress) { item ->
+                    WatchCard(item = item, onIncrement = { viewModel.incrementProgress(item.id) })
                 }
             }
         }
@@ -156,7 +185,7 @@ fun BadgeIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, color: Colo
 }
 
 @Composable
-fun WatchCard(item: WatchItem) {
+fun WatchCard(item: WatchItem, onIncrement: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
         shape = RoundedCornerShape(16.dp),
@@ -180,7 +209,7 @@ fun WatchCard(item: WatchItem) {
                     color = Color.White
                 )
                 IconButton(
-                    onClick = { /* TODO: Incrementation logic */ },
+                    onClick = onIncrement,
                     modifier = Modifier
                         .background(Color(0xFF3B82F6), CircleShape)
                         .size(32.dp)
