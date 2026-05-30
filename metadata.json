@@ -1,0 +1,6 @@
+{
+  "name": "MediaVerse Tracker",
+  "description": "Gestionnaire de visionnage pop-culture propulsé par l'IA",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
